@@ -121,27 +121,47 @@ write.table(conenr, 'DTU_SplicingEnrichment_20201202.txt', sep = '\t', quote = F
 extractConsequenceGenomeWide(ONTSwitchList) 
 extractSplicingGenomeWide(ONTSwitchList)
 
-#######
-# Hypergeometric test of enrichment of RBM5-binding between DTU-identified genes vs the background list 
-#######
+################
+# 2021 08 05 GENOME-WIDE OVERVIEW OF ALTERNATIVE SPLICING. MANUAL RUN OF FILTERING AND ALTERNATIVE SPLICING FUNCTIONS (normally run within part1) WITH THE FILTERING AND ISOFORMSWITCHING WITH REDUCING SET TO FALSE
+################
 
-# for hypergeometric test we need: 
-# m - number of marked elements (total linked to RBM5)
-# N - total number of genes assessed (from processed gtf annotation) 
-# n - this is N - m (i.e. proportion of non-marked elements, genes without RBM5 link)
-# k - Size of selection (i.e. the DTU set of 104)
-# x - the number marked in the selection (linked to RBM5 in the 104 DTUs)
+ONTSwitchList_GLOBAL <- importRdata(
+  isoformCountMatrix   = salmonQuant$counts,
+  isoformRepExpression = salmonQuant$abundance,
+  designMatrix         = ProjectDesign,
+  isoformExonAnnoation ="Talon_minID90_N5K3_purged_filtered_gencode_renamed_validated_NoSequins.gtf",
+  isoformNtFasta       ="Talon_minID90_N5K3_purged_filtered_gencode_renamed_validated_NoSequins_transcriptome.fa",
+  showProgress = TRUE)
+ONTSwitchList_GLOBAL
 
-#### RUNNING HYPERGEOMETRIC TEST ON INTERSECTS OF TWO CELLS LINES FOR CONFIDENCE IN RESULT
-m2 <- 9882 # total linked to RBM5 interaction using ENCODE chipseq bedtools intersect from intersection of two cell line runs (ENCFF9xx and ENCFF1xx)
-N2 <- 32325 # total assessed in the DTU analysis (from DTU ONTSwitchlist)
-n2 = N2 - m2
-k2 <- 104 # total found to be DTU 
-x2 <- 69 # total of DTU found to be RBM5 associated
+# MANUAL PREFILTER
+ONTSwitchList_GLOBAL <- preFilter(ONTSwitchList_GLOBAL)
 
-# Calculate Hypergeometric test p-value
-intersects.p.value <-  phyper(q=x2-1, m=m2, n=n2, k=k2, lower.tail=FALSE)
-intersects.p.value
+# MANUAL RUN OF ISOFORMSWITCHTEST (filter and test normally run in part1 of analysis) & SPLICING ASSESSMENTS 
+ONTSwitchList_GLOBAL_result <- isoformSwitchTestDEXSeq(
+  switchAnalyzeRlist = ONTSwitchList_GLOBAL,
+  reduceToSwitchingGenes=FALSE
+)
+# THIS IS THE LIST OF SWITCHES WITHOUT ANY FUNCTIONAL ASSESSMENT
+extractSwitchSummary(ONTSwitchList_GLOBAL_result)
 
-fold.enrichment2 <- (x2 / k2) / (m2 / N2)
-fold.enrichment2
+# GLOBAL ANALYSIS OF ALTERNATIVE SPLICING OF ALL EXPRESSED ISOFORMS (I.E. PRE-FILTERED)
+ONTSwitchList_GLOBAL_result<- analyzeAlternativeSplicing(ONTSwitchList_GLOBAL_result,onlySwitchingGenes=FALSE)
+
+# GLOBAL AS SUMMARY ON THE MANUAL RUN (ALL GENES WITH ISOFORMS CAPABLE OF SWITCHING)
+extractSplicingGenomeWide(ONTSwitchList_GLOBAL_result, featureToExtract = 'all')
+#extractSplicingSummary(ONTSwitchList_GLOBAL_result)
+extractSplicingEnrichment(ONTSwitchList_GLOBAL_result)
+#look at summary of events:
+extractSplicingSummary(ONTSwitchList_GLOBAL_result, returnResult = TRUE)
+ONTSwitchList_GLOBAL_result
+
+# extract individual counts for features using the table function (https://bioconductor.org/packages/devel/bioc/vignettes/IsoformSwitchAnalyzeR/inst/doc/IsoformSwitchAnalyzeR.html#filtering)
+table(ONTSwitchList_GLOBAL_result$AlternativeSplicingAnalysis$ES)
+table(ONTSwitchList_GLOBAL_result$AlternativeSplicingAnalysis$MES)
+table(ONTSwitchList_GLOBAL_result$AlternativeSplicingAnalysis$MEE)
+table(ONTSwitchList_GLOBAL_result$AlternativeSplicingAnalysis$IR)
+table(ONTSwitchList_GLOBAL_result$AlternativeSplicingAnalysis$A5)
+table(ONTSwitchList_GLOBAL_result$AlternativeSplicingAnalysis$A3)
+table(ONTSwitchList_GLOBAL_result$AlternativeSplicingAnalysis$ATSS)
+table(ONTSwitchList_GLOBAL_result$AlternativeSplicingAnalysis$ATTS)
